@@ -1,0 +1,12 @@
+name = "form-respuestas"
+compatibility_date = "2024-10-01"
+
+# Binding a la base D1 con alias "DB"
+[[d1_databases]]
+binding = "DB"
+database_name = "respuestas-db"
+database_id = "REEMPLAZA_EN_PROD" # se rellenará automáticamente al enlazar en Pages
+
+# Para Pages Functions (opcional, ayuda al dev local)
+[vars]
+NODE_ENV = "production"
