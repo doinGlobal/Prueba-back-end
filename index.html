@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formulario (Cloudflare + D1)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    form { max-width: 420px; display: grid; gap: .75rem; }
+    label { font-weight: 600; }
+    input, select, button, textarea { padding: .6rem; font-size: 1rem; }
+    .ok { color: #0a0; }
+    .err { color: #a00; }
+    table { border-collapse: collapse; margin-top: 2rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; }
+  </style>
+</head>
+<body>
+  <h1>Registro de respuestas</h1>
+
+  <form id="form">
+    <div>
+      <label for="nombre">Nombre y apellido</label>
+      <input id="nombre" name="nombre" type="text" required maxlength="120" />
+    </div>
+    <div>
+      <label for="edad">Edad</label>
+      <input id="edad" name="edad" type="number" min="0" max="120" required />
+    </div>
+    <div>
+      <label for="cargo">Cargo</label>
+      <input id="cargo" name="cargo" type="text" required maxlength="120" />
+    </div>
+    <button type="submit">Enviar</button>
+    <div id="msg"></div>
+  </form>
+
+  <h2>Respuestas guardadas</h2>
+  <button id="refrescar">Refrescar lista</button>
+  <div id="tabla"></div>
+
+  <script>
+    const form = document.getElementById('form');
+    const msg = document.getElementById('msg');
+    const tabla = document.getElementById('tabla');
+    const btnRefrescar = document.getElementById('refrescar');
+
+    async function cargarTabla() {
+      tabla.textContent = 'Cargando...';
+      try {
+        const r = await fetch('/api/respuestas');
+        const data = await r.json();
+        const rows = data.items ?? [];
+        if (!rows.length) { tabla.textContent = 'Sin datos aún.'; return; }
+        const html = [
+          '<table><thead><tr><th>ID</th><th>Nombre</th><th>Edad</th><th>Cargo</th><th>Fecha</th></tr></thead><tbody>',
+          ...rows.map(x => `<tr>
+              <td>${x.id}</td>
+              <td>${x.nombre}</td>
+              <td>${x.edad}</td>
+              <td>${x.cargo}</td>
+              <td>${new Date(x.created_at).toLocaleString()}</td>
+            </tr>`),
+          '</tbody></table>'
+        ].join('');
+        tabla.innerHTML = html;
+      } catch (e) {
+        tabla.innerHTML = '<span class="err">Error cargando datos</span>';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      const payload = {
+        nombre: form.nombre.value.trim(),
+        edad: Number(form.edad.value),
+        cargo: form.cargo.value.trim()
+      };
+      try {
+        const r = await fetch('/api/respuestas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (r.ok) {
+          msg.innerHTML = '<span class="ok">Guardado correctamente</span>';
+          form.reset();
+          await cargarTabla();
+        } else {
+          msg.innerHTML = `<span class="err">${data?.error ?? 'Error'}</span>`;
+        }
+      } catch (e) {
+        msg.innerHTML = '<span class="err">Error de red</span>';
+      }
+    });
+
+    btnRefrescar.addEventListener('click', cargarTabla);
+    cargarTabla();
+  </script>
+</body>
+</html>
